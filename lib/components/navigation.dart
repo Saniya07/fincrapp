@@ -1,34 +1,42 @@
 import 'package:fincr/pages/add/add.dart';
 import 'package:fincr/pages/settings/settings.dart';
+import 'package:fincr/pages/split_it_up/split_it_up.dart';
 import 'package:fincr/pages/tracker/tracker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fincr/assets/colors.dart';
 
 class AppNavigation extends StatefulWidget {
-  const AppNavigation({super.key});
+  int currentTab = 0;
+  int previousTab = 0;
+  Widget currentScreen;
+
+  AppNavigation(
+      {super.key, required this.currentTab, required this.currentScreen});
 
   @override
   _AppNavigationState createState() => _AppNavigationState();
 }
 
 class _AppNavigationState extends State<AppNavigation> {
-  int currentTab = 4; // Track the selected index
-  final List<Widget> screens = [Settings()];
   final pageStorageBucket = PageStorageBucket();
-  Widget currentScreen = Settings();
 
   Column getAppNavigationItem(screen, tab, tabText, tabIcon) {
     if (tabText == "Add") {
+      if (widget.currentTab != 2) {
+        widget.previousTab = widget.currentTab;
+      }
       return Column(
         children: [
-          SizedBox(height: currentTab == tab ? 8 : 12),
+          SizedBox(height: widget.currentTab == tab ? 8 : 12),
           MaterialButton(
               splashColor: CustomColors.appColor,
               onPressed: () {
                 setState(() {
-                  currentScreen = screen;
-                  currentTab = tab;
+                  widget.currentScreen = DynamicAdd(
+                    fromScreenNumber: widget.previousTab,
+                  );
+                  widget.currentTab = tab;
                 });
               },
               minWidth: 40,
@@ -58,15 +66,17 @@ class _AppNavigationState extends State<AppNavigation> {
           height: 4,
           width: 68,
           decoration: BoxDecoration(
-              color: currentTab == tab ? Colors.white : CustomColors.appColor),
+              color: widget.currentTab == tab
+                  ? Colors.white
+                  : CustomColors.appColor),
         ),
-        SizedBox(height: currentTab == tab ? 8 : 12),
+        SizedBox(height: widget.currentTab == tab ? 8 : 12),
         MaterialButton(
             splashColor: CustomColors.appColor,
             onPressed: () {
               setState(() {
-                currentScreen = screen;
-                currentTab = tab;
+                widget.currentScreen = screen;
+                widget.currentTab = tab;
               });
             },
             minWidth: 40,
@@ -75,7 +85,7 @@ class _AppNavigationState extends State<AppNavigation> {
               children: [
                 Icon(tabIcon,
                     size: 30,
-                    color: currentTab == tab
+                    color: widget.currentTab == tab
                         ? Colors.white
                         : CustomColors.appGrey),
                 Text(
@@ -83,7 +93,7 @@ class _AppNavigationState extends State<AppNavigation> {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                       fontSize: 12,
-                      color: currentTab == tab
+                      color: widget.currentTab == tab
                           ? Colors.white
                           : CustomColors.appGrey),
                 ),
@@ -96,18 +106,7 @@ class _AppNavigationState extends State<AppNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageStorage(bucket: pageStorageBucket, child: currentScreen),
-      // floatingActionButton: SizedBox(
-      //   height: 80,
-      //   width: 80,
-      //   child: FloatingActionButton(
-      //     onPressed: () {},
-      //     shape: const CircleBorder(),
-      //     backgroundColor: CustomColors.appPrimaryColor,
-      //     child: const Icon(Icons.add, color: CustomColors.appColor, size: 50),
-      //   ),
-      // ),
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      body: PageStorage(bucket: pageStorageBucket, child: widget.currentScreen),
       bottomNavigationBar: BottomAppBar(
           padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
           color: CustomColors.appColor,
@@ -122,10 +121,10 @@ class _AppNavigationState extends State<AppNavigation> {
                 getAppNavigationItem(
                     const Tracker(), 0, "Tracker", Icons.receipt_long),
                 getAppNavigationItem(
-                    const Tracker(), 1, "Split", Icons.safety_divider),
+                    const SplitItUp(), 1, "Split", Icons.safety_divider),
                 getAppNavigationItem(DynamicAdd(), 2, "Add", Icons.add),
                 getAppNavigationItem(
-                    currentScreen, 3, "Finols", Icons.track_changes),
+                    const Tracker(), 3, "Finols", Icons.track_changes),
                 getAppNavigationItem(
                     const Settings(), 4, "Settings", Icons.settings),
               ],
