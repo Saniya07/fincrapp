@@ -3,6 +3,7 @@ import 'package:fincr/components/buttons.dart';
 import 'package:fincr/components/dropdown.dart';
 import 'package:fincr/components/filters.dart';
 import 'package:fincr/components/text.dart';
+import 'package:fincr/constants/constants.dart';
 import 'package:fincr/pages/tracker/tracker.dart';
 import 'package:fincr/utils.dart';
 import 'package:flutter/material.dart';
@@ -61,7 +62,7 @@ class _TransactionState extends State<Transaction> {
       if (count != 0) {
         errorMessage += " and ";
       }
-      errorMessage += "category";
+      errorMessage += TABLENAMES.CATEGORY;
     }
 
     if (transactionName.isEmpty ||
@@ -69,12 +70,7 @@ class _TransactionState extends State<Transaction> {
         widget.selectedCategoryId.isEmpty) {
       showToast(errorMessage, Colors.red, Colors.white);
     } else {
-      print('Transaction Name: $transactionName');
-      print('Transaction Amount: $transactionAmount');
-      print('Selected Category ID: ${widget.selectedCategoryId}');
-      print(isExpense);
-
-      updateObjectInTable("Transaction", "id", widget.transactionId, {
+      updateObjectInTable(TABLENAMES.TRANSACTION, "id", widget.transactionId, {
         "name": transactionName,
         "amount": parseAmountFromString(transactionAmount),
         "is_expense": isExpense,
@@ -118,6 +114,7 @@ class _TransactionState extends State<Transaction> {
                   children: [
                     IconButton(
                       onPressed: () {
+                        setState(() {});
                         Navigator.pop(context, {
                           'topRightFilter': trackerTopRightFilter,
                           'transactionTypeFilter': trackerTransactionTypeFilter,
