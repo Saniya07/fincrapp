@@ -98,12 +98,14 @@ class AppTextInput extends StatelessWidget {
   final String placeholder;
   final TextInputType keyboardType;
   final TextEditingController controller;
+  double fontSize = 36;
 
-  const AppTextInput(
+  AppTextInput(
       {super.key,
       required this.placeholder,
       required this.keyboardType,
-      required this.controller});
+      required this.controller,
+      this.fontSize = 36});
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +117,7 @@ class AppTextInput extends StatelessWidget {
         decoration: InputDecoration(
           labelText: placeholder,
           hintText: placeholder,
-          hintStyle: TextStyle(color: Colors.white, fontSize: 36),
+          hintStyle: TextStyle(color: Colors.white, fontSize: fontSize),
           labelStyle: const TextStyle(color: Colors.white),
           border: const OutlineInputBorder(),
         ),
@@ -127,8 +129,15 @@ class AppTextInput extends StatelessWidget {
 
 class DecimalInputField extends StatefulWidget {
   final TextEditingController controller;
+  final Color textColor;
+  void Function(String)? onChanged;
 
-  const DecimalInputField({super.key, required this.controller});
+  DecimalInputField({
+    Key? key,
+    required this.controller,
+    this.textColor = Colors.white,
+    this.onChanged,
+  }) : super(key: key);
 
   @override
   _DecimalInputFieldState createState() => _DecimalInputFieldState();
@@ -177,11 +186,11 @@ class _DecimalInputFieldState extends State<DecimalInputField> {
     });
   }
 
-  @override
-  void dispose() {
-    widget.controller.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   widget.controller.dispose();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -194,21 +203,26 @@ class _DecimalInputFieldState extends State<DecimalInputField> {
           });
         },
         child: TextField(
+          onChanged: (String text) {
+            if (widget.onChanged != null) {
+              widget.onChanged!(text);
+            }
+          },
           controller: widget.controller,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Enter amount',
-            labelStyle: TextStyle(color: Colors.white),
+            labelStyle: TextStyle(color: widget.textColor),
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(color: CustomColors.appGrey, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.white, width: 2.0),
+              borderSide: BorderSide(color: widget.textColor, width: 2.0),
             ),
           ),
           style: TextStyle(
-              color: _hasFocus ? Colors.white : CustomColors.appGrey,
+              color: _hasFocus ? widget.textColor : CustomColors.appGrey,
               fontSize: 36),
           textAlign: TextAlign.right,
         ),

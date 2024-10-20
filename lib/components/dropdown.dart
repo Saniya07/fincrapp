@@ -1,32 +1,42 @@
 import 'package:fincr/components/text.dart';
+import 'package:fincr/constants/constants.dart';
 import 'package:fincr/utils.dart';
 import 'package:flutter/material.dart';
 
-const List<String> list = <String>['month', 'week', 'year'];
-
 class DropdownFilter extends StatelessWidget {
-  final String topRightFilter;
+  final String currenFilter;
   final ValueChanged<String> onFilterChange;
+  final Map<String, String> dropdownMenuEntries;
 
   const DropdownFilter({
-    required this.topRightFilter,
+    required this.currenFilter,
     required this.onFilterChange,
+    required this.dropdownMenuEntries,
   });
 
   @override
   Widget build(BuildContext context) {
+    double maxWidth = dropdownMenuEntries.keys.fold<double>(0, (width, key) {
+      final textWidth =
+          (key.length * 14.0); // Approximate width for each character
+      return textWidth > width ? textWidth : width;
+    });
+
     return Container(
       color: Colors.white,
       height: 24,
-      width: 90,
+      width: maxWidth < 90 ? 90 : maxWidth,
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       child: DropdownButton<String>(
-        value: topRightFilter,
-        items: const <DropdownMenuItem<String>>[
-          DropdownMenuItem(value: "month", child: Text("Month")),
-          DropdownMenuItem(value: "week", child: Text("Week")),
-          DropdownMenuItem(value: "year", child: Text("Year")),
-        ],
+        value: dropdownMenuEntries.values.contains(currenFilter)
+            ? currenFilter
+            : dropdownMenuEntries.values.first,
+        items: dropdownMenuEntries.entries.map((entry) {
+          return DropdownMenuItem<String>(
+            value: entry.value,
+            child: Text(entry.key),
+          );
+        }).toList(),
         onChanged: (String? newValue) {
           if (newValue != null) {
             onFilterChange(newValue);
@@ -36,59 +46,6 @@ class DropdownFilter extends StatelessWidget {
     );
   }
 }
-
-// class DropdownFilter extends StatefulWidget {
-//   String topRightFilter;
-
-//   DropdownFilter({super.key, required this.topRightFilter});
-
-//   @override
-//   State<DropdownFilter> createState() => _DropdownMenuExampleState();
-// }
-
-// class _DropdownMenuExampleState extends State<DropdownFilter> {
-//   late String dropdownValue = list.first;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     dropdownValue = widget.topRightFilter;
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//         decoration: BoxDecoration(
-//           color: Colors.white, // Set the background color to white
-//           borderRadius:
-//               BorderRadius.circular(8), // Optional: Add rounded corners
-//           // boxShadow: [
-//           //   BoxShadow(
-//           //     color: Colors.grey.withOpacity(0.5), // Shadow color
-//           //     spreadRadius: 1, // Spread radius
-//           //     blurRadius: 5, // Blur radius
-//           //     offset: Offset(0, 3), // Offset in x and y direction
-//           //   ),
-//           // ],
-//         ),
-//         child: DropdownMenu<String>(
-//           width: 120,
-//           initialSelection: list.first,
-//           textStyle: TextStyle(color: CustomColors.appColor, fontSize: 16),
-//           onSelected: (String? value) {
-//             // This is called when the user selects an item.
-//             setState(() {
-//               dropdownValue = value!;
-//               widget.topRightFilter = value;
-//             });
-//           },
-//           dropdownMenuEntries:
-//               list.map<DropdownMenuEntry<String>>((String value) {
-//             return DropdownMenuEntry<String>(value: value, label: value);
-//           }).toList(),
-//         ));
-//   }
-// }
 
 class CategoryBox extends StatefulWidget {
   final String categoryIdentifier;
@@ -128,26 +85,23 @@ class _CategoryBoxState extends State<CategoryBox> {
   }
 
   Future<void> initializeData() async {
-    print("initializing data");
     if (widget.selectedCategoryId.isNotEmpty) {
       final _categoryData = await getFromTableViaFilter(
-          "Category", "id", widget.selectedCategoryId);
-      // print(_categoryData);
+          TABLENAMES.CATEGORY, "id", widget.selectedCategoryId);
+
       setState(() {
         selectedCategory = _categoryData[0]["name"];
         selectedIcon = getIconDataFromString(_categoryData[0]["icon"]);
       });
     }
-    print(selectedCategory);
-    print(selectedIcon);
   }
 
   void _showCategorySelection() async {
     List<List<String>> categories = [];
     Map<String, IconData> categoryIcons = {};
-    print(widget.categoryIdentifier);
+
     final categoryData = getFromTableViaFilter(
-        "Category", "category_for", widget.categoryIdentifier);
+        TABLENAMES.CATEGORY, "category_for", widget.categoryIdentifier);
     for (var data in await categoryData) {
       categories.add([data["id"], data["name"]]);
       categoryIcons[data["name"]] = getIconDataFromString(data["icon"]);

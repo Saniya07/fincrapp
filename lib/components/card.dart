@@ -106,7 +106,7 @@ class TrackerTopCard extends StatelessWidget {
                       textColor: Colors.white,
                     ),
                     AppBoldText(
-                      text: convertAmountFormat(amount, false),
+                      text: convertAmountFormat(amount.toDouble(), false),
                       fontSize: 20,
                       textColor: mainColor,
                     ),

@@ -2,6 +2,7 @@ import 'package:fincr/components/card.dart';
 import 'package:fincr/components/dropdown.dart';
 import 'package:fincr/components/listview.dart';
 import 'package:fincr/components/text.dart';
+import 'package:fincr/constants/constants.dart';
 import 'package:fincr/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:fincr/assets/colors.dart';
@@ -21,75 +22,54 @@ class _TrackerState extends State<Tracker> {
   double totalExpensesBasedOnFilters = 0.0;
   Map<String, List<List<dynamic>>> dateSeparatedTransactions = {};
   Map<String, List<List<dynamic>>> filteredDateSeparatedTransactions = {};
+  Map<String, dynamic> categoryMappings = {};
+
+  bool isLoading = true;
 
   // to initialize on loading the screen
   @override
   void initState() {
     super.initState();
     _getAndSetTransactions();
+    _getAndSetCateogryMappings();
+  }
+
+  void _getAndSetCateogryMappings() async {
+    var data = await getFromTable(TABLENAMES.CATEGORY);
+    Map<String, Map<String, dynamic>> categMappings = {};
+
+    for (var d in data) {
+      categMappings[d["id"]] = d;
+    }
+
+    setState(() {
+      categoryMappings.clear();
+      categoryMappings = categMappings;
+      isLoading = false;
+    });
   }
 
   void _getAndSetTransactions() async {
-    final now = DateTime.now();
-    DateFormat dateFormat = DateFormat('EEE, MMM dd');
-
     dateSeparatedTransactions.clear();
 
     totalIncomeBasedOnFilters = 0.0;
     totalExpensesBasedOnFilters = 0.0;
 
-    final transactions = await supabase
-        .from('Transaction')
-        .select("*")
-        .order("created_at", ascending: false);
+    final transactions = await getFromTableViaFilter(TABLENAMES.TRANSACTION,
+        "user_id", "1e114504-5f6b-4eb7-9403-fd11776a5bb3");
 
-    for (var transaction in transactions) {
-      DateTime createdAt = DateTime.parse(transaction['created_at']);
-      bool shouldInclude = false;
+    var result = convertListToDateSeparatedList(transactions, topRightFilter);
+    dateSeparatedTransactions = result[0];
+    totalIncomeBasedOnFilters = result[1];
+    totalExpensesBasedOnFilters = result[2];
 
-      if (topRightFilter == 'month' &&
-          createdAt.month == now.month &&
-          createdAt.year == now.year) {
-        shouldInclude = true;
-      } else if (topRightFilter == 'week') {
-        final startOfWeek = now.subtract(Duration(days: now.weekday));
-        final endOfWeek = startOfWeek.add(const Duration(days: 8));
-
-        if (createdAt.isAfter(startOfWeek) && createdAt.isBefore(endOfWeek)) {
-          shouldInclude = true;
-        }
-      } else if (topRightFilter == 'year' && createdAt.year == now.year) {
-        shouldInclude = true;
-      }
-
-      if (shouldInclude) {
-        String dateKey = dateFormat.format(createdAt);
-        if (!dateSeparatedTransactions.containsKey(dateKey)) {
-          dateSeparatedTransactions[dateKey] = [];
-        }
-
-        if (!transaction["is_expense"]) {
-          totalIncomeBasedOnFilters += transaction["amount"];
-        } else {
-          totalExpensesBasedOnFilters += transaction["amount"];
-        }
-
-        dateSeparatedTransactions[dateKey]?.add([
-          transaction["id"],
-          transaction["name"],
-          DateFormat('HH:mm').format(createdAt),
-          double.parse(transaction["amount"].toStringAsFixed(2)),
-          transaction["is_expense"],
-          transaction["category_id"],
-        ]);
-      }
-    }
     setState(() {});
   }
 
   void _deleteTransaction(String id) async {
-    await deleteFromTable("Transaction", "id", id);
+    await deleteFromTable(TABLENAMES.TRANSACTION, "id", id);
     _getAndSetTransactions();
+    _getAndSetCateogryMappings();
     _updateTransactionsWithTransactionFilter();
     setState(() {});
   }
@@ -127,6 +107,7 @@ class _TrackerState extends State<Tracker> {
         topRightFilter = newFilter;
         transactionTypeFilter = "all";
         _getAndSetTransactions();
+        _getAndSetCateogryMappings();
       }
     });
   }
@@ -153,8 +134,13 @@ class _TrackerState extends State<Tracker> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   DropdownFilter(
-                    topRightFilter: topRightFilter,
+                    currenFilter: topRightFilter,
                     onFilterChange: _updateFilter,
+                    dropdownMenuEntries: const {
+                      "Month": "month",
+                      "Week": "week",
+                      "Year": "year"
+                    },
                   )
                 ],
               ),
@@ -252,13 +238,16 @@ class _TrackerState extends State<Tracker> {
                 ],
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: DateSeparatedListView(
-                    dateSeparatedTransactions: transactionTypeFilter == "all"
-                        ? dateSeparatedTransactions
-                        : filteredDateSeparatedTransactions,
-                    slideableActionPressed: _deleteTransaction),
-              )
+              if (!isLoading)
+                Expanded(
+                  child: DateSeparatedListView(
+                      dateSeparatedTransactions: transactionTypeFilter == "all"
+                          ? dateSeparatedTransactions
+                          : filteredDateSeparatedTransactions,
+                      slideableActionPressed: _deleteTransaction,
+                      categoryMappings: categoryMappings,
+                      onClose: () {}),
+                )
             ]),
           ),
         ),

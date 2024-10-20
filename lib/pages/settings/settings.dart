@@ -1,5 +1,7 @@
 import 'package:fincr/assets/colors.dart';
 import 'package:fincr/components/text.dart';
+import 'package:fincr/constants/constants.dart';
+import 'package:fincr/pages/settings/accounts_settings.dart';
 import 'package:fincr/pages/settings/categories_settings.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +11,6 @@ class Settings extends StatelessWidget {
   GestureDetector generateSettingBox(settingText, context, nextPage) {
     return GestureDetector(
       onTap: () {
-        print("tapped");
         Navigator.push(
             context, MaterialPageRoute(builder: (context) => nextPage));
       },
@@ -18,7 +19,7 @@ class Settings extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            AppText(text: settingText, fontSize: 16, textColor: Colors.white),
+            AppText(text: settingText, fontSize: 20, textColor: Colors.white),
             const Spacer(),
             const Icon(Icons.chevron_right, color: Colors.white)
           ],
@@ -42,7 +43,9 @@ class Settings extends StatelessWidget {
                         fontSize: 20,
                         textColor: Colors.white),
                     generateSettingBox(
-                        "Categories", context, CategoriesSettings())
+                        "Categories", context, CategoriesSettings()),
+                    generateSettingBox(
+                        TABLENAMES.ACCOUNTS, context, AccountsSettings())
                   ],
                 )))));
   }
