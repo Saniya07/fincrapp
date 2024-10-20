@@ -183,26 +183,26 @@ class _FriendTransactionState extends State<FriendTransaction> {
     for (var data in existingTransData) {
       print(widget.split);
       print(data['user_id']);
-      for (var key in widget.split) {
-        if 
-// TODO: figure out how to get widet.split when friend is changed
-        payload = {
-          "name": transactionName,
-          "note": "",
-          "amount": widget.split[data["user_id"]],
-          "category_id": widget.selectedCategoryId,
-          "is_expense": true,
-          "friend_id": friend[0]["id"],
-          "user_id": data["user_id"],
-        };
+//       for (var key in widget.split) {
+//         if
+// // TODO: figure out how to get widet.split when friend is changed
+//         payload = {
+//           "name": transactionName,
+//           "note": "",
+//           "amount": widget.split[data["user_id"]],
+//           "category_id": widget.selectedCategoryId,
+//           "is_expense": true,
+//           "friend_id": friend[0]["id"],
+//           "user_id": data["user_id"],
+//         };
 
-        updateObjectInTable(
-          TABLENAMES.TRANSACTION,
-          "id",
-          data["id"],
-          payload,
-        );
-      }
+//         updateObjectInTable(
+//           TABLENAMES.TRANSACTION,
+//           "id",
+//           data["id"],
+//           payload,
+//         );
+//       }
     }
 
     widget.onClose();
