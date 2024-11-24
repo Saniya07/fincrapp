@@ -118,16 +118,20 @@ Future<List<Map<String, dynamic>>> getGroupsWithReferences(userId) async {
   for (var group in data) {
     group["linked_amount"] = 0.0;
     group["GroupUsers"] = [];
-    for (var c in group["couple"]) {
-      if (c != userId) {
-        group["GroupUsers"].add(userDataMap[c] ?? {});
-        for (var trans in group["GroupSplits"]) {
-          if (trans["paid_by"] == userId) {
-            group["linked_amount"] += trans["split"][c] ?? 0.0;
-          } else {
-            group["linked_amount"] -= trans["split"][userId] ?? 0.0;
-          }
+
+    for (var trans in group["GroupSplits"]) {
+      double totalExceptLIU = 0;
+      for (var c in group["couple"]) {
+        if (c != userId) {
+          group["GroupUsers"].add(userDataMap[c] ?? {});
+          totalExceptLIU += trans["split"][c] ?? 0.0;
         }
+      }
+
+      if (trans["paid_by"] == userId) {
+        group["linked_amount"] += totalExceptLIU;
+      } else {
+        group["linked_amount"] -= trans["split"][userId] ?? 0.0;
       }
     }
   }
@@ -318,4 +322,22 @@ List<dynamic> convertListToDateSeparatedList(
     totalIncomeBasedOnFilters,
     totalExpensesBasedOnFilters
   ];
+}
+
+bool listEquals<T>(List<T>? a, List<T>? b) {
+  if (a == null) {
+    return b == null;
+  }
+  if (b == null || a.length != b.length) {
+    return false;
+  }
+  if (identical(a, b)) {
+    return true;
+  }
+  for (int index = 0; index < a.length; index += 1) {
+    if (a[index] != b[index]) {
+      return false;
+    }
+  }
+  return true;
 }

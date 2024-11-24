@@ -139,7 +139,7 @@ class _FriendTransactionsDetailsState extends State<FriendTransactionsDetails> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Center(
                     child: isLoading == true
-                        ? CircularProgressIndicator()
+                        ? const CircularProgressIndicator()
                         : Column(children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -328,37 +328,6 @@ class _FriendTransactionsDetailsState extends State<FriendTransactionsDetails> {
                             const SizedBox(
                               height: 16,
                             ),
-                            // Row(
-                            //   children: [
-                            //     Column(
-                            //       children: [
-                            //         Container(
-                            //           decoration: BoxDecoration(
-                            //             shape: BoxShape.circle,
-                            //             border: Border.all(
-                            //               color: Colors.white,
-                            //               width:
-                            //                   2.0, // Set the color and width of the border
-                            //             ),
-                            //           ),
-                            //           child: const CircleAvatar(
-                            //             backgroundImage:
-                            //                 AssetImage("lib/assets/netflix.jpg"),
-                            //             minRadius: 28,
-                            //             maxRadius: 32,
-                            //           ),
-                            //         ),
-                            //         const SizedBox(
-                            //           height: 8,
-                            //         ),
-                            //         const AppText(
-                            //             text: "Joint Account",
-                            //             fontSize: 12,
-                            //             textColor: Colors.white)
-                            //       ],
-                            //     ),
-                            //   ],
-                            // ),
                             const SizedBox(
                               height: 16,
                             ),

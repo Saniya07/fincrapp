@@ -27,13 +27,19 @@ class DynamicAdd extends StatefulWidget {
 
 class _DynamicAddState extends State<DynamicAdd> {
   bool isExpense = true;
-  String addState = "expense";
+  String addState = "";
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
 
   String selectedCategory = TABLENAMES.CATEGORY;
   String selectedCategoryId = "";
+
+  // variables for expense
+  String expenseFromAccount = "";
+
+  // variabled for income
+  String incomeToAccount = "";
 
   // variables for transfer
   Map<String, String> accountsNameToIdMap = {};
@@ -68,7 +74,10 @@ class _DynamicAddState extends State<DynamicAdd> {
     super.initState();
     if (widget.fromScreenNumber == 0) {
       _getAndSetAccounts();
+      addState = "expense";
     } else {
+      _getAndSetAccounts();
+      addState = "expense";
       getAndSetFriendsAndGroupsData(listFor: "friends");
     }
   }
@@ -101,6 +110,9 @@ class _DynamicAddState extends State<DynamicAdd> {
 
       transferFromAccountId = accountsIdToNameMap.keys.toList()[0];
       transferToAccountId = accountsIdToNameMap.keys.toList()[0];
+
+      expenseFromAccount = accountsIdToNameMap.keys.toList()[0];
+      incomeToAccount = accountsIdToNameMap.keys.toList()[0];
 
       isLoading = false;
     });
@@ -157,14 +169,57 @@ class _DynamicAddState extends State<DynamicAdd> {
           {"amount": accountFrom[0]["amount"] - doubAmount});
       updateObjectInTable(TABLENAMES.ACCOUNTS, "id", transferToAccountId,
           {"amount": accountTo[0]["amount"] + doubAmount});
+    } else if (addState == "expense") {
+      if (expenseFromAccount == "" || expenseFromAccount == null) {
+        showToast(
+            "What account did you use to pay it?", Colors.yellow, Colors.black);
+        return;
+      }
+
+      // debit money from the account
+      List<Map<String, dynamic>> accountFrom = await getFromTableViaFilter(
+          TABLENAMES.ACCOUNTS, "id", expenseFromAccount);
+      double doubAmount = parseAmountFromString(transactionAmount);
+      updateObjectInTable(TABLENAMES.ACCOUNTS, "id", expenseFromAccount,
+          {"amount": accountFrom[0]["amount"] - doubAmount});
+    } else if (addState == "income") {
+      if (incomeToAccount == "" || incomeToAccount == null) {
+        showToast("What account did that money come to?", Colors.yellow,
+            Colors.black);
+        return;
+      }
+
+      // credit money to the account
+      List<Map<String, dynamic>> accountTo = await getFromTableViaFilter(
+          TABLENAMES.ACCOUNTS, "id", incomeToAccount);
+      double doubAmount = parseAmountFromString(transactionAmount);
+      updateObjectInTable(TABLENAMES.ACCOUNTS, "id", incomeToAccount,
+          {"amount": accountTo[0]["amount"] + doubAmount});
     }
+
     insertInTable(TABLENAMES.TRANSACTION, {
       "name": transactionName,
       "amount": parseAmountFromString(transactionAmount),
       "is_expense": isExpense,
       "category_id": addState != "transfer" ? selectedCategoryId : null,
-      "from_account": addState == "transfer" ? transferFromAccountId : null,
-      "to_account": addState == "transfer" ? transferToAccountId : null,
+      "from_account": addState == "transfer"
+          ? transferFromAccountId
+          : (addState == "expense" ? expenseFromAccount : null),
+      "to_account": addState == "transfer"
+          ? transferToAccountId
+          : (addState == "income" ? incomeToAccount : null),
+    });
+  }
+
+  void onExpenseFromAccountSelect(String accountId) {
+    setState(() {
+      expenseFromAccount = accountId;
+    });
+  }
+
+  void onIncomeToAccountSelect(String accountId) {
+    setState(() {
+      incomeToAccount = accountId;
     });
   }
 
@@ -230,14 +285,16 @@ class _DynamicAddState extends State<DynamicAdd> {
       } else {
         if (_selectedItems.isNotEmpty) {
           setState(() {
-            splitPaidBy = _selectedItems[0]["FriendUser"];
+            splitPaidBy = _selectedItems[0];
           });
         }
       }
     });
     getAndSetPeopleData();
+    isLoading = false;
   }
 
+  // done for friend transaction
   void createFriendSplitTransaction() async {
     String transactionName = nameController.text;
     String transactionAmount = amountController.text;
@@ -289,8 +346,17 @@ class _DynamicAddState extends State<DynamicAdd> {
       "friend_id": friend[0]["id"] ?? "",
       "split_method": splitMethod,
       "category_id": selectedCategoryId,
-      "split": amountSplit,
+      "split": amountSplit
     };
+    if (splitPaidBy["id"] == liuData["id"]) {
+      payload["accountId"] = expenseFromAccount;
+      // debit from account
+      List<Map<String, dynamic>> accountFrom = await getFromTableViaFilter(
+          TABLENAMES.ACCOUNTS, "id", expenseFromAccount);
+      double doubAmount = parseAmountFromString(transactionAmount);
+      updateObjectInTable(TABLENAMES.ACCOUNTS, "id", expenseFromAccount,
+          {"amount": accountFrom[0]["amount"] - doubAmount});
+    }
 
     Map<String, dynamic> friendSplitData =
         await insertInTable(TABLENAMES.FRIEND_SPLITS, payload);
@@ -306,6 +372,11 @@ class _DynamicAddState extends State<DynamicAdd> {
         "friend_split_id": friendSplitData["id"],
         "user_id": key,
       };
+
+      // if current user is liuData who paid the split, then add account id
+      if (key == splitPaidBy["id"] && splitPaidBy["id"] == liuData["id"]) {
+        payload["from_account"] = expenseFromAccount;
+      }
 
       insertInTable(TABLENAMES.TRANSACTION, payload);
     }
@@ -364,6 +435,15 @@ class _DynamicAddState extends State<DynamicAdd> {
       "category_id": selectedCategoryId,
       "split": amountSplit
     };
+    if (splitPaidBy["id"] == liuData["id"]) {
+      payload["accountId"] = expenseFromAccount;
+      // debit from account
+      List<Map<String, dynamic>> accountFrom = await getFromTableViaFilter(
+          TABLENAMES.ACCOUNTS, "id", expenseFromAccount);
+      double doubAmount = parseAmountFromString(transactionAmount);
+      updateObjectInTable(TABLENAMES.ACCOUNTS, "id", expenseFromAccount,
+          {"amount": accountFrom[0]["amount"] - doubAmount});
+    }
 
     Map<String, dynamic> groupSplitData =
         await insertInTable(TABLENAMES.GROUP_SPLITS, payload);
@@ -379,6 +459,10 @@ class _DynamicAddState extends State<DynamicAdd> {
         "group_split_id": groupSplitData["id"],
         "user_id": key,
       };
+      // if current user is liuData who paid the split, then add account id
+      if (key == splitPaidBy["id"] && splitPaidBy["id"] == liuData["id"]) {
+        payload["from_account"] = expenseFromAccount;
+      }
       insertInTable(TABLENAMES.TRANSACTION, payload);
     }
   }
@@ -516,7 +600,6 @@ class _DynamicAddState extends State<DynamicAdd> {
                                   onSelectFromListView,
                                   "split_paid_by",
                                   isMultiSelect: false);
-                              print("gesture tapped");
                             },
                             child: Card(
                                 elevation: 0,
@@ -579,6 +662,36 @@ class _DynamicAddState extends State<DynamicAdd> {
                       ),
                     ]),
                     const SizedBox(height: 30),
+
+                    if (!isLoading &&
+                        ((addState != "transfer" &&
+                                widget.fromScreenNumber == 0) ||
+                            (widget.fromScreenNumber == 1 &&
+                                splitPaidBy["id"] == liuData["id"]))) ...[
+                      Column(
+                        children: [
+                          Row(
+                            children: [
+                              AppText(
+                                  text: addState == "expense" ? "From" : "To",
+                                  fontSize: 14,
+                                  textColor: Colors.white),
+                              const SizedBox(width: 10),
+                              DropdownFilter(
+                                currenFilter: addState == "expense"
+                                    ? expenseFromAccount
+                                    : incomeToAccount,
+                                onFilterChange: addState == "expense"
+                                    ? onExpenseFromAccountSelect
+                                    : onIncomeToAccountSelect,
+                                dropdownMenuEntries: accountsNameToIdMap,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+
                     if (!isLoading && addState == "transfer")
                       Column(
                         children: [
@@ -615,52 +728,28 @@ class _DynamicAddState extends State<DynamicAdd> {
                       ),
                     const SizedBox(height: 10),
                     // if (!isLoading)
-                    IconButtonRow(
-                        selectedPeopleDataMap: selectedPeopleDataMap,
-                        selectedPeopleIds: (selectedFriendsForTransaction +
-                                    [liuData])
-                                .isNotEmpty
-                            ? (selectedFriendsForTransaction + [liuData])
-                                .map((people) =>
-                                    people["id"].toString()) // Cast to String
-                                .toList()
-                            : [],
-                        userId: userId,
-                        amountToSplitController: amountController,
-                        alreadySplit: amountSplit,
-                        iconsMap: const <String, IconData>{
-                          "split": Icons.call_split,
-                          "share": Icons.bar_chart,
-                          "percent": Icons.percent,
-                          "manual": Icons.confirmation_num
-                        },
-                        onIconSelected: onTransSplitSelect),
-                    // Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    //   IconButton(
-                    //       onPressed: () {
-                    //         print("equal");
-                    //       },
-                    //       icon: const Icon(Icons.call_split,
-                    //           color: Colors.white, size: 36)),
-                    //   IconButton(
-                    //       onPressed: () {
-                    //         print("ratio");
-                    //       },
-                    //       icon: const Icon(Icons.bar_chart,
-                    //           color: Colors.white, size: 36)),
-                    //   IconButton(
-                    //       onPressed: () {
-                    //         print("percent");
-                    //       },
-                    //       icon: const Icon(Icons.percent,
-                    //           color: Colors.white, size: 36)),
-                    //   IconButton(
-                    //       onPressed: () {
-                    //         print("manual");
-                    //       },
-                    //       icon: const Icon(Icons.confirmation_number,
-                    //           color: Colors.white, size: 36))
-                    // ]),
+                    if (widget.fromScreenNumber == 1)
+                      if (!isLoading)
+                        IconButtonRow(
+                            selectedPeopleDataMap: selectedPeopleDataMap,
+                            selectedPeopleIds: (selectedFriendsForTransaction +
+                                        [liuData])
+                                    .isNotEmpty
+                                ? (selectedFriendsForTransaction + [liuData])
+                                    .map((people) => people["id"]
+                                        .toString()) // Cast to String
+                                    .toList()
+                                : [],
+                            userId: userId,
+                            amountToSplitController: amountController,
+                            alreadySplit: amountSplit,
+                            iconsMap: const <String, IconData>{
+                              "split": Icons.call_split,
+                              "share": Icons.bar_chart,
+                              "percent": Icons.percent,
+                              "manual": Icons.confirmation_num
+                            },
+                            onIconSelected: onTransSplitSelect),
                     const Spacer(),
                     Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,

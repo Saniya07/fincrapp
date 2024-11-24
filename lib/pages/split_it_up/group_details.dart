@@ -132,7 +132,7 @@ class _GroupTransactionsDetailsState extends State<GroupTransactionsDetails> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Center(
                     child: isLoading == true
-                        ? CircularProgressIndicator()
+                        ? const CircularProgressIndicator()
                         : Column(children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,

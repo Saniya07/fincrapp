@@ -113,7 +113,6 @@ class _IconButtonRowState extends State<IconButtonRow> {
   @override
   void initState() {
     super.initState();
-
     if (widget.selectedSplitMethod.isNotEmpty) {
       int index = 0;
       for (var data in widget.iconsMap.keys.toList()) {

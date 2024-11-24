@@ -7,8 +7,8 @@ import 'package:fincr/constants/constants.dart';
 import 'package:fincr/utils.dart';
 import 'package:flutter/material.dart';
 
-// ADD SPLIT TRANSACTION FOR FRIEND
-class FriendTransaction extends StatefulWidget {
+// ADD SPLIT TRANSACTION FOR GROUPS
+class GroupTransaction extends StatefulWidget {
   String userId = "1e114504-5f6b-4eb7-9403-fd11776a5bb3";
 
   final String transactionId;
@@ -29,7 +29,7 @@ class FriendTransaction extends StatefulWidget {
 
   void Function() onClose;
 
-  FriendTransaction({
+  GroupTransaction({
     super.key,
     required this.transactionId,
     required this.nameController,
@@ -57,10 +57,10 @@ class FriendTransaction extends StatefulWidget {
             .toList()[0];
 
   @override
-  _FriendTransactionState createState() => _FriendTransactionState();
+  _GroupTransactionState createState() => _GroupTransactionState();
 }
 
-class _FriendTransactionState extends State<FriendTransaction> {
+class _GroupTransactionState extends State<GroupTransaction> {
   String trackerTopRightFilter = "month";
   String trackerTransactionTypeFilter = "all";
   late bool isExpense;
@@ -69,7 +69,7 @@ class _FriendTransactionState extends State<FriendTransaction> {
   @override
   void initState() {
     super.initState();
-
+    getAndSetPeopleData();
     // widget.split = widget.split.map((key, value) {
     //   String newKey;
     //   if (key == widget.userId || key == "user_id") {
@@ -115,9 +115,13 @@ class _FriendTransactionState extends State<FriendTransaction> {
           widget.splitPaidBy["id"] != widget.liuData["id"]) {
         widget.splitPaidBy = widget.liuData;
       }
-
       if (whatIsSelected == "friend_list") {
         setState(() {
+          List<String> oldSelectedPeople = widget.selectedFriendsForTransaction
+              .map((data) => data["id"] as String)
+              .toList();
+
+          widget.split = {};
           widget.selectedFriendsForTransaction = _selectedItems;
 
           // make sure widget.split has transaction split between selected folks only (in case selected person was changed)
@@ -181,8 +185,14 @@ class _FriendTransactionState extends State<FriendTransaction> {
       return;
     }
 
-    var friend = await getFromTableViaFilter(TABLENAMES.FRIENDS, "couple",
-        [widget.userId, widget.selectedFriendsForTransaction[0]["id"]],
+    // fetch group data
+    var group = await getFromTableViaFilter(
+        TABLENAMES.GROUPS,
+        "couple",
+        [widget.userId] +
+            widget.selectedFriendsForTransaction
+                .map((item) => item["id"].toString())
+                .toList(),
         filterType: "contains");
 
     var payload = {
@@ -190,22 +200,19 @@ class _FriendTransactionState extends State<FriendTransaction> {
       "amount": parseAmountFromString(transactionAmount),
       "added_by": widget.userId,
       "paid_by": widget.splitPaidBy["id"],
-      "friend_id": friend[0]["id"],
+      "group_id": group[0]["id"] ?? "",
       "split_method": widget.splitMethod,
       "category_id": widget.selectedCategoryId,
       "split": widget.split
     };
 
-    Map<String, dynamic> friendSplitData = await updateObjectInTable(
-        TABLENAMES.FRIEND_SPLITS, "id", widget.transactionId, payload);
+    // update group split object for current transactionId and new payload
+    Map<String, dynamic> groupSplitData = await updateObjectInTable(
+        TABLENAMES.GROUP_SPLITS, "id", widget.transactionId, payload);
 
-    // delete existing friend split transaction objects and create new ones
-    List<Map<String, dynamic>> existingTransData = await getFromTableViaFilter(
-        TABLENAMES.TRANSACTION, "friend_split_id", friendSplitData["id"]);
-
-    for (var data in existingTransData) {
-      deleteFromTable(TABLENAMES.TRANSACTION, "id", data["id"]);
-    }
+    // delete existing group split TRANSACTION objects and create new ones
+    deleteFromTable(
+        TABLENAMES.TRANSACTION, "group_split_id", groupSplitData["id"]);
 
     for (var key in widget.split.keys) {
       payload = {
@@ -214,8 +221,8 @@ class _FriendTransactionState extends State<FriendTransaction> {
         "amount": widget.split[key],
         "category_id": widget.selectedCategoryId,
         "is_expense": true,
-        "friend_id": friend[0]["id"] ?? "",
-        "friend_split_id": friendSplitData["id"],
+        "group_id": group[0]["id"] ?? "",
+        "group_split_id": groupSplitData["id"],
         "user_id": key,
       };
 
@@ -288,7 +295,7 @@ class _FriendTransactionState extends State<FriendTransaction> {
                             widget.selectedFriendsForTransaction,
                             onSelectFromListView,
                             "friend_list",
-                            isMultiSelect: false);
+                            isMultiSelect: true);
                       },
                       child: const AppText(
                           text: "Select People",

@@ -9,21 +9,27 @@ import 'package:fincr/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+// EDIT TRANSACTION PAGE
 class Transaction extends StatefulWidget {
   final String transactionId;
   final TextEditingController nameController;
   final TextEditingController amountController;
   String selectedCategoryId;
   String addState;
+  bool currentIsExpense;
+  String currentAccountId;
+  double currentAmount;
 
-  Transaction({
-    super.key,
-    required this.transactionId,
-    required this.nameController,
-    required this.amountController,
-    required this.selectedCategoryId,
-    required this.addState,
-  });
+  Transaction(
+      {super.key,
+      required this.transactionId,
+      required this.nameController,
+      required this.amountController,
+      required this.selectedCategoryId,
+      required this.addState,
+      required this.currentIsExpense,
+      required this.currentAccountId,
+      required this.currentAmount});
 
   @override
   _TransactionState createState() => _TransactionState();
@@ -34,14 +40,47 @@ class _TransactionState extends State<Transaction> {
   String trackerTransactionTypeFilter = "all";
   late bool isExpense;
   Key categoryBoxKey = UniqueKey();
+  String newAccountId = "";
+  Map<String, String> accountsNameToIdMap = {};
+  Map<String, String> accountsIdToNameMap = {};
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     isExpense = widget.addState.toLowerCase() == "expense";
+    newAccountId = widget.currentAccountId;
+
+    _getAndSetAccounts();
   }
 
-  void _done() {
+  _getAndSetAccounts() async {
+    var data = await getFromTable(TABLENAMES.ACCOUNTS);
+    Map<String, String> nameToId = {};
+    Map<String, String> IdToName = {};
+
+    for (var d in data) {
+      nameToId[d["name"]] = d["id"];
+      IdToName[d["id"]] = d["name"];
+    }
+    setState(() {
+      accountsNameToIdMap.clear();
+      accountsIdToNameMap.clear();
+
+      accountsNameToIdMap = nameToId;
+      accountsIdToNameMap = IdToName;
+
+      isLoading = false;
+    });
+  }
+
+  void onChangingAccount(String newAccId) {
+    if (newAccId != null && newAccId != "") {
+      newAccountId = newAccId;
+    }
+  }
+
+  void _done() async {
     String transactionName = widget.nameController.text;
     String transactionAmount = widget.amountController.text;
 
@@ -70,6 +109,43 @@ class _TransactionState extends State<Transaction> {
         widget.selectedCategoryId.isEmpty) {
       showToast(errorMessage, Colors.red, Colors.white);
     } else {
+      Map<String, dynamic> payload = {
+        "name": transactionName,
+        "amount": parseAmountFromString(transactionAmount),
+        "is_expense": isExpense,
+        "category_id": widget.selectedCategoryId,
+        "updated_at": DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now())
+      };
+
+      // if isExpense changes or accountId changes or totalAmount changes, then update the same in account ids
+      if (widget.currentIsExpense != isExpense ||
+          widget.currentAccountId != newAccountId ||
+          widget.currentAmount != parseAmountFromString(transactionAmount)) {
+        // update in old account
+        List<Map<String, dynamic>> oldAccount = await getFromTableViaFilter(
+            TABLENAMES.ACCOUNTS, "id", widget.currentAccountId);
+        double updatedAmount = oldAccount[0]["amount"];
+        if (widget.currentIsExpense) {
+          updatedAmount += widget.currentAmount;
+        } else {
+          updatedAmount -= widget.currentAmount;
+        }
+        updateObjectInTable(TABLENAMES.ACCOUNTS, "id", widget.currentAccountId,
+            {"amount": updatedAmount});
+
+        // update in new account
+        List<Map<String, dynamic>> newAccount = await getFromTableViaFilter(
+            TABLENAMES.ACCOUNTS, "id", newAccountId);
+        updatedAmount = newAccount[0]["amount"];
+        if (isExpense) {
+          updatedAmount -= parseAmountFromString(transactionAmount);
+        } else {
+          updatedAmount += parseAmountFromString(transactionAmount);
+        }
+        updateObjectInTable(
+            TABLENAMES.ACCOUNTS, "id", newAccountId, {"amount": updatedAmount});
+      }
+
       updateObjectInTable(TABLENAMES.TRANSACTION, "id", widget.transactionId, {
         "name": transactionName,
         "amount": parseAmountFromString(transactionAmount),
@@ -155,6 +231,26 @@ class _TransactionState extends State<Transaction> {
                     Expanded(
                       child: DecimalInputField(
                           controller: widget.amountController),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Column(
+                  children: [
+                    Row(
+                      children: [
+                        AppText(
+                            text: widget.addState == "expense" ? "From" : "To",
+                            fontSize: 14,
+                            textColor: Colors.white),
+                        const SizedBox(width: 10),
+                        if (!isLoading)
+                          DropdownFilter(
+                            currenFilter: widget.currentAccountId,
+                            onFilterChange: onChangingAccount,
+                            dropdownMenuEntries: accountsNameToIdMap,
+                          ),
+                      ],
                     ),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'package:fincr/components/modals/modals.dart';
 import 'package:fincr/pages/split_it_up/friend_details.dart';
 import 'package:fincr/pages/split_it_up/friend_transaction.dart';
 import 'package:fincr/pages/split_it_up/group_details.dart';
+import 'package:fincr/pages/split_it_up/group_transaction.dart';
 import 'package:fincr/pages/tracker/transaction.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -339,23 +340,47 @@ class CustomSlideableCard extends StatelessWidget {
                                     text: amount.toStringAsFixed(2)),
                                 selectedCategoryId: selectedCategoryId,
                                 addState: isExpense ? "expense" : "income",
+                                currentIsExpense: isExpense,
+                                currentAccountId: fromAccountId != ""
+                                    ? fromAccountId
+                                    : toAccountId,
+                                currentAmount: amount,
                               )
-                            : FriendTransaction(
-                                transactionId: id,
-                                nameController:
-                                    TextEditingController(text: heading),
-                                amountController: TextEditingController(
-                                    text: amount.toStringAsFixed(2)),
-                                selectedCategoryId: selectedCategoryId,
-                                friendsListData: friendsListData,
-                                usersListData: usersListData,
-                                selectedFriendsForTransaction:
-                                    selectedFriendsForTransaction,
-                                paidBy: paidBy,
-                                split: split,
-                                splitMethod: splitMethod,
-                                selectedPeopleDataMap: selectedPeopleDataMap,
-                                onClose: onClose);
+                            : (listViewType == "friends_split"
+                                ? FriendTransaction(
+                                    transactionId: id,
+                                    nameController:
+                                        TextEditingController(text: heading),
+                                    amountController: TextEditingController(
+                                        text: amount.toStringAsFixed(2)),
+                                    selectedCategoryId: selectedCategoryId,
+                                    friendsListData: friendsListData,
+                                    usersListData: usersListData,
+                                    selectedFriendsForTransaction:
+                                        selectedFriendsForTransaction,
+                                    paidBy: paidBy,
+                                    split: split,
+                                    splitMethod: splitMethod,
+                                    selectedPeopleDataMap:
+                                        selectedPeopleDataMap,
+                                    onClose: onClose)
+                                : GroupTransaction(
+                                    transactionId: id,
+                                    nameController:
+                                        TextEditingController(text: heading),
+                                    amountController: TextEditingController(
+                                        text: amount.toStringAsFixed(2)),
+                                    selectedCategoryId: selectedCategoryId,
+                                    friendsListData: friendsListData,
+                                    usersListData: usersListData,
+                                    selectedFriendsForTransaction:
+                                        selectedFriendsForTransaction,
+                                    paidBy: paidBy,
+                                    split: split,
+                                    splitMethod: splitMethod,
+                                    selectedPeopleDataMap:
+                                        selectedPeopleDataMap,
+                                    onClose: onClose));
                       },
                     ));
                   },
@@ -404,15 +429,15 @@ class CustomSlideableCard extends StatelessWidget {
                             AppText(
                                 text: paidBy == userId
                                     ? split.entries
-                                        .firstWhere(
-                                            (entry) => entry.key != userId)
-                                        .value
+                                        .where((entry) => entry.key != userId)
+                                        .map((entry) => entry.value)
+                                        .fold(0.0, (sum, value) => sum + value)
                                         .toString()
                                     : split[userId].toString(),
                                 fontSize: 16,
                                 textColor: paidBy == userId
-                                    ? CustomColors.appRed
-                                    : CustomColors.appGreen)
+                                    ? CustomColors.appGreen
+                                    : CustomColors.appRed)
                           ],
                         ))),
         ));
