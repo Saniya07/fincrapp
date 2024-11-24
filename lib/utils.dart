@@ -306,7 +306,7 @@ List<dynamic> convertListToDateSeparatedList(
         double.parse(transaction["amount"].toStringAsFixed(2)),
         transaction?["is_expense"] ?? false,
         transaction?["category_id"] ?? "",
-        transaction?["from_account"] ?? "",
+        transaction?["from_account"] ?? transaction?["accountId"] ?? "",
         transaction?["to_account"] ?? "",
         transaction?["friend_id"] ?? "",
         transaction?["group_id"] ?? "",

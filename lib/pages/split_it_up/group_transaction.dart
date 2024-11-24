@@ -24,6 +24,7 @@ class GroupTransaction extends StatefulWidget {
   Map<String, double> split;
   String splitMethod;
   Map<String, Map<String, dynamic>> selectedPeopleDataMap;
+  String accountId = "";
 
   Map<String, dynamic> liuData;
 
@@ -41,6 +42,7 @@ class GroupTransaction extends StatefulWidget {
     required this.split,
     required this.splitMethod,
     required this.onClose,
+    required this.accountId,
     this.selectedPeopleDataMap = const {},
     this.liuData = const {
       "created_at": "2024-08-17T20:10:45.429442+00:00",
@@ -66,10 +68,23 @@ class _GroupTransactionState extends State<GroupTransaction> {
   late bool isExpense;
   Key categoryBoxKey = UniqueKey();
 
+  String existingTransactionAmount = "";
+  String existingSplitPaidBy = "";
+
+  bool isLoading = true;
+
+  Map<String, String> accountsIdToNameMap = {};
+  Map<String, String> accountsNameToIdMap = {};
+  String expenseFromAccount = "";
+
   @override
   void initState() {
     super.initState();
     getAndSetPeopleData();
+
+    _getAndSetAccounts();
+    existingTransactionAmount = widget.amountController.text;
+    existingSplitPaidBy = widget.splitPaidBy["id"];
     // widget.split = widget.split.map((key, value) {
     //   String newKey;
     //   if (key == widget.userId || key == "user_id") {
@@ -99,6 +114,37 @@ class _GroupTransactionState extends State<GroupTransaction> {
 
     setState(() {
       widget.selectedPeopleDataMap = peopleMap;
+    });
+  }
+
+  _getAndSetAccounts() async {
+    var data = await getFromTable(TABLENAMES.ACCOUNTS);
+    Map<String, String> nameToId = {};
+    Map<String, String> IdToName = {};
+
+    for (var d in data) {
+      nameToId[d["name"]] = d["id"];
+      IdToName[d["id"]] = d["name"];
+    }
+    await getAndSetPeopleData();
+    setState(() {
+      accountsNameToIdMap.clear();
+      accountsIdToNameMap.clear();
+
+      accountsNameToIdMap = nameToId;
+      accountsIdToNameMap = IdToName;
+      print(widget.accountId);
+      expenseFromAccount = (widget.accountId != "" || widget.accountId != null)
+          ? accountsIdToNameMap.keys.toList()[0]
+          : widget.accountId;
+      print(expenseFromAccount);
+      isLoading = false;
+    });
+  }
+
+  void onExpenseFromAccountSelect(String accountId) {
+    setState(() {
+      expenseFromAccount = accountId;
     });
   }
 
@@ -206,6 +252,36 @@ class _GroupTransactionState extends State<GroupTransaction> {
       "split": widget.split
     };
 
+    // if split paid by is changed or transaction amount is changed or account id is changed
+    if (widget.splitPaidBy["id"] != existingSplitPaidBy ||
+        existingTransactionAmount != transactionAmount ||
+        expenseFromAccount != widget.accountId) {
+      // if account id is changed
+      if (expenseFromAccount != widget.accountId) {
+        payload["accountId"] = expenseFromAccount;
+      }
+
+      // update old account
+      if (widget.accountId != "" && widget.accountId != null) {
+        List<Map<String, dynamic>> oldAccount = await getFromTableViaFilter(
+            TABLENAMES.ACCOUNTS, "id", widget.accountId);
+        updateObjectInTable(TABLENAMES.ACCOUNTS, "id", widget.accountId, {
+          "amount": oldAccount[0]["amount"] +
+              parseAmountFromString(existingTransactionAmount)
+        });
+      }
+
+      // update new account
+      if (expenseFromAccount != "" && expenseFromAccount != null) {
+        List<Map<String, dynamic>> newAccount = await getFromTableViaFilter(
+            TABLENAMES.ACCOUNTS, "id", expenseFromAccount);
+        updateObjectInTable(TABLENAMES.ACCOUNTS, "id", expenseFromAccount, {
+          "amount":
+              newAccount[0]["amount"] - parseAmountFromString(transactionAmount)
+        });
+      }
+    }
+
     // update group split object for current transactionId and new payload
     Map<String, dynamic> groupSplitData = await updateObjectInTable(
         TABLENAMES.GROUP_SPLITS, "id", widget.transactionId, payload);
@@ -225,6 +301,10 @@ class _GroupTransactionState extends State<GroupTransaction> {
         "group_split_id": groupSplitData["id"],
         "user_id": key,
       };
+      // if current user is liuData who paid the split, then add account id
+      if (key == widget.splitPaidBy["id"]) {
+        payload["from_account"] = expenseFromAccount;
+      }
 
       insertInTable(TABLENAMES.TRANSACTION, payload);
     }
@@ -416,6 +496,29 @@ class _GroupTransactionState extends State<GroupTransaction> {
                     ),
                   ],
                 ),
+                if (widget.splitPaidBy["id"] == widget.liuData["id"]) ...[
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Column(
+                    children: [
+                      Row(
+                        children: [
+                          const AppText(
+                              text: "From",
+                              fontSize: 14,
+                              textColor: Colors.white),
+                          const SizedBox(width: 10),
+                          DropdownFilter(
+                            currenFilter: expenseFromAccount,
+                            onFilterChange: onExpenseFromAccountSelect,
+                            dropdownMenuEntries: accountsNameToIdMap,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 10),
                 IconButtonRow(
                     selectedPeopleDataMap: widget.selectedPeopleDataMap,

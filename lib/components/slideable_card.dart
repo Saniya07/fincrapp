@@ -363,6 +363,7 @@ class CustomSlideableCard extends StatelessWidget {
                                     splitMethod: splitMethod,
                                     selectedPeopleDataMap:
                                         selectedPeopleDataMap,
+                                    accountId: fromAccountId,
                                     onClose: onClose)
                                 : GroupTransaction(
                                     transactionId: id,
@@ -380,6 +381,7 @@ class CustomSlideableCard extends StatelessWidget {
                                     splitMethod: splitMethod,
                                     selectedPeopleDataMap:
                                         selectedPeopleDataMap,
+                                    accountId: fromAccountId,
                                     onClose: onClose));
                       },
                     ));
